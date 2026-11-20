@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, } from 'vue'
+import { computed, reactive, ref } from 'vue'
 
 interface LearningTool {
   id: 'codex' | 'cursor' | 'claude-code'
@@ -36,6 +36,13 @@ const tools = reactive<LearningTool[]>([
 const totalCompletedTasks = computed(() =>
   tools.reduce((total, tool) => total + tool.completedTasks, 0),
 )
+
+const lastResetToolId = ref<LearningTool['id'] | null>(null)
+
+function resetTasks(tool: LearningTool) {
+  tool.completedTasks = 0
+  lastResetToolId.value = tool.id
+}
 </script>
 
 <template>
@@ -97,14 +104,33 @@ const totalCompletedTasks = computed(() =>
                 <span class="sr-only">{{ tool.name }} 已完成 </span>{{ tool.completedTasks }} 项
               </dd>
             </dl>
-            <button
-              type="button"
-              :aria-label="'完成 ' + tool.name + ' 的一项任务'"
-              @click="tool.completedTasks++"
-            >
-              <span aria-hidden="true">+</span>
-              完成任务
-            </button>
+            <div class="card-actions">
+              <button
+                type="button"
+                :aria-label="'完成 ' + tool.name + ' 的一项任务'"
+                @click="tool.completedTasks++"
+              >
+                <span aria-hidden="true">+</span>
+                完成任务
+              </button>
+              <button
+                class="reset-button"
+                type="button"
+                :aria-label="'重置 ' + tool.name + ' 的任务'"
+                :disabled="tool.completedTasks === 0"
+                @click="resetTasks(tool)"
+              >
+                重置任务
+              </button>
+            </div>
+          </div>
+          <div
+            class="reset-feedback"
+            role="status"
+          >
+            <p v-if="lastResetToolId === tool.id && tool.completedTasks === 0">
+              {{ tool.name }} 的任务进度已重置。
+            </p>
           </div>
         </li>
       </ul>
@@ -301,6 +327,12 @@ const totalCompletedTasks = computed(() =>
   color: var(--muted);
 }
 
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .card-bottom button {
   display: inline-flex;
   align-items: center;
@@ -325,6 +357,28 @@ const totalCompletedTasks = computed(() =>
 .card-bottom button:focus-visible {
   outline: 2px solid #205ed3;
   outline-offset: 3px;
+}
+
+.card-bottom .reset-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #1857bc;
+}
+
+.card-bottom .reset-button:not(:disabled):hover {
+  background: #e8f1ff;
+}
+
+.card-bottom .reset-button:disabled {
+  background: #eef2f7;
+  color: var(--muted);
+  cursor: default;
+}
+
+.reset-feedback p {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 .sr-only {
