@@ -114,6 +114,36 @@ test.describe('用户管理', () => {
     await expect(pagination(page).getByRole('status')).toHaveText('共 2 条记录 · 第 1 / 1 页')
   })
 
+  test('从筛选结果第二页重置条件并保留新增和编辑的数据', async ({ page }) => {
+    await addUser(page)
+    const editedEmail = 'reset-filters@example.com'
+    await userRow(page, firstUser.name).getByRole('button', { name: /编辑用户/ }).click()
+    const dialog = page.getByRole('dialog', { name: '编辑用户' })
+    await dialog.getByLabel('邮箱', { exact: true }).fill(editedEmail)
+    await dialog.getByRole('button', { name: '保存修改', exact: true }).click()
+    await expect(dialog).toBeHidden()
+
+    const search = page.getByLabel('搜索用户')
+    const filter = page.getByLabel('状态', { exact: true })
+    const pager = pagination(page)
+    const summary = pager.getByRole('status')
+    await search.fill('+1 (202)')
+    await filter.selectOption('active')
+    await pager.getByRole('button', { name: '下一页' }).click()
+    await expect(summary).toContainText('第 2 /')
+
+    await page.getByRole('button', { name: '重置筛选', exact: true }).click()
+
+    await expect(search).toHaveValue('')
+    await expect(filter).toHaveValue('all')
+    const total = mockUsers.length + 1
+    await expect(summary).toHaveText(`共 ${total} 条记录 · 第 1 / ${Math.ceil(total / 10)} 页`)
+    await expect(pager.getByRole('button', { name: '上一页' })).toBeDisabled()
+    await expect(userRow(page, disabledUser.name)).toBeVisible()
+    await expect(userRow(page, newUser.name)).toBeVisible()
+    await expect(userRow(page, firstUser.name).getByRole('cell', { name: editedEmail, exact: true })).toBeVisible()
+  })
+
   test('默认每页 10 条并正确处理上一页、下一页和首尾边界', async ({ page }) => {
     const pager = pagination(page)
     const previous = pager.getByRole('button', { name: '上一页' })

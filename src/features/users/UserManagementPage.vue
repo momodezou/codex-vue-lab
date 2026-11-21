@@ -57,6 +57,12 @@ const pageUsers = computed(() => {
   return filteredUsers.value.slice(startIndex, startIndex + pageSize.value)
 })
 
+function resetFilters() {
+  keyword.value = ''
+  statusFilter.value = 'all'
+  requestedPage.value = 1
+}
+
 function openCreateForm() {
   formFeedback.value = ''
   formSession.value = { mode: 'create' }
@@ -179,6 +185,13 @@ async function saveForm(values: UserFormValues) {
               </option>
             </select>
           </div>
+          <button
+            class="reset-filters-button"
+            type="button"
+            @click="resetFilters"
+          >
+            重置筛选
+          </button>
         </div>
         <UserTable
           v-if="totalRecords > 0"
@@ -353,6 +366,7 @@ h2 {
 
 input,
 select,
+.reset-filters-button,
 .page-controls button {
   box-sizing: border-box;
   min-width: 0;
@@ -372,6 +386,7 @@ input::placeholder {
 input:focus-visible,
 select:focus-visible,
 .add-user-button:focus-visible,
+.reset-filters-button:focus-visible,
 .page-controls button:focus-visible {
   outline: 2px solid #205ed3;
   outline-offset: 2px;
@@ -407,12 +422,18 @@ select:focus-visible,
   gap: 0.5rem;
 }
 
+.reset-filters-button {
+  align-self: flex-end;
+}
+
+.reset-filters-button,
 .page-controls button {
   color: #1857bc;
   font-weight: 650;
   cursor: pointer;
 }
 
+.reset-filters-button:hover,
 .page-controls button:not(:disabled):hover {
   background: #e8f1ff;
 }

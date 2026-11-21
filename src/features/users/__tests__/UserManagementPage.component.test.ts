@@ -110,6 +110,20 @@ describe('UserManagementPage 搜索和筛选', () => {
     expect(previousPage(page).attributes('disabled')).toBeDefined()
     expect(nextPage(page).attributes('disabled')).toBeDefined()
   })
+
+  it('重置无匹配结果的筛选时恢复列表并保留每页条数', async () => {
+    const page = mountPage()
+    const pageSize = page.get('#user-page-size')
+    await pageSize.setValue('20')
+    await page.get('#user-search').setValue('没有匹配的用户')
+    expect(page.get('.page-summary').text()).toContain('第 0 / 0 页')
+
+    await page.get('.reset-filters-button').trigger('click')
+
+    expect(pageSize.element).toHaveProperty('value', '20')
+    expect(rowNames(page)).toHaveLength(20)
+    expect(page.get('.page-summary').text()).toBe('共 25 条记录 · 第 1 / 2 页')
+  })
 })
 
 describe('UserManagementPage 分页', () => {
@@ -134,6 +148,17 @@ describe('UserManagementPage 分页', () => {
 
     await previousPage(page).trigger('click')
     expect(page.get('.page-summary').text()).toBe('共 25 条记录 · 第 2 / 3 页')
+  })
+
+  it('关键词和状态已是默认值时仍可重置到第一页', async () => {
+    const page = mountPage()
+    await nextPage(page).trigger('click')
+    expect(page.get('.page-summary').text()).toContain('第 2 / 3 页')
+
+    await page.get('.reset-filters-button').trigger('click')
+
+    expect(page.get('.page-summary').text()).toContain('第 1 / 3 页')
+    expect(previousPage(page).attributes('disabled')).toBeDefined()
   })
 
   it.each([
