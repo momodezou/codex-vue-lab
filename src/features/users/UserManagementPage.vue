@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { mockUsers } from './mockUsers'
-import { normalizePhone } from './phone'
 import type { User, UserFormValues, UserStatusFilter } from './types'
 import UserFormDialog from './UserFormDialog.vue'
+import { filterUsers, getUserPagination } from './userList'
 import UserTable from './UserTable.vue'
 
 const statusOptions: ReadonlyArray<{ value: UserStatusFilter; label: string }> = [
@@ -43,24 +43,18 @@ watch([keyword, statusFilter, pageSize], () => {
 
 const normalizedKeyword = computed(() => keyword.value.trim().toLowerCase())
 
-const filteredUsers = computed(() => {
-  const query = normalizedKeyword.value
-  const phoneQuery = normalizePhone(query)
-  const status = statusFilter.value
-
-  return users.value.filter(user =>
-    (!query || user.name.toLowerCase().includes(query) || (phoneQuery.length > 0 && user.phone.includes(phoneQuery)))
-    && (status === 'all' || user.status === status),
-  )
-})
+const filteredUsers = computed(() =>
+  filterUsers(users.value, normalizedKeyword.value, statusFilter.value),
+)
 
 const totalRecords = computed(() => filteredUsers.value.length)
-const totalPages = computed(() => Math.ceil(totalRecords.value / pageSize.value))
-const currentPage = computed(() => Math.min(Math.max(1, requestedPage.value), totalPages.value))
+const pagination = computed(() =>
+  getUserPagination(totalRecords.value, pageSize.value, requestedPage.value),
+)
 
 const pageUsers = computed(() => {
-  const start = Math.max(0, currentPage.value - 1) * pageSize.value
-  return filteredUsers.value.slice(start, start + pageSize.value)
+  const { startIndex } = pagination.value
+  return filteredUsers.value.slice(startIndex, startIndex + pageSize.value)
 })
 
 function openCreateForm() {
@@ -111,7 +105,7 @@ function updateUser(userId: User['id'], values: UserFormValues) {
   users.value = users.value.map(user => user.id === userId
     ? { ...user, name, phone, email, status }
     : user)
-  requestedPage.value = Math.max(1, currentPage.value)
+  requestedPage.value = Math.max(1, pagination.value.currentPage)
   formFeedback.value = '用户信息更新成功'
 }
 
@@ -205,7 +199,7 @@ async function saveForm(values: UserFormValues) {
             class="page-summary"
             role="status"
           >
-            共 {{ totalRecords }} 条记录 · 第 {{ currentPage }} / {{ totalPages }} 页
+            共 {{ totalRecords }} 条记录 · 第 {{ pagination.currentPage }} / {{ pagination.totalPages }} 页
           </p>
           <div class="page-controls">
             <label
@@ -228,15 +222,15 @@ async function saveForm(values: UserFormValues) {
             </label>
             <button
               type="button"
-              :disabled="currentPage <= 1"
-              @click="requestedPage = currentPage - 1"
+              :disabled="pagination.currentPage <= 1"
+              @click="requestedPage = pagination.currentPage - 1"
             >
               上一页
             </button>
             <button
               type="button"
-              :disabled="currentPage >= totalPages"
-              @click="requestedPage = currentPage + 1"
+              :disabled="pagination.currentPage >= pagination.totalPages"
+              @click="requestedPage = pagination.currentPage + 1"
             >
               下一页
             </button>

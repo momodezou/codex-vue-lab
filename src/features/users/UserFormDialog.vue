@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref, useId, useTemplateRef } from 'vue'
-import { normalizePhone } from './phone'
 import type { UserFormValues } from './types'
+import { validateUserForm } from './userFormValidation'
+import type { UserFormErrors } from './userFormValidation'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -19,56 +20,16 @@ const textFields = [
   { name: 'email', label: '邮箱', type: 'email', autocomplete: 'email' },
 ] as const
 
-type FieldErrors = Partial<Record<keyof UserFormValues, string>>
 const fieldOrder = [...textFields.map(field => field.name), 'status'] as const
 const formId = useId()
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 const { name, phone, email, status } = props.initialValues
 const draft = reactive<UserFormValues>({ name, phone, email, status })
-const errors = ref<FieldErrors>({})
+const errors = ref<UserFormErrors>({})
 const isSubmitting = ref(false)
 
 onMounted(() => dialog.value?.showModal())
 onBeforeUnmount(() => dialog.value?.close())
-
-function validateDraft() {
-  const phoneInput = draft.phone.trim()
-  const emailValidity = dialog.value?.querySelector<HTMLInputElement>('input[name="email"]')?.validity
-  const values: UserFormValues = {
-    name: draft.name.trim(),
-    phone: normalizePhone(phoneInput),
-    email: draft.email.trim(),
-    status: draft.status,
-  }
-  const fieldErrors: FieldErrors = {}
-
-  if (!values.name) {
-    fieldErrors.name = '请输入姓名。'
-  }
-
-  if (!phoneInput) {
-    fieldErrors.phone = '请输入手机号。'
-  } else if (!/^\+?\d{7,15}$/.test(values.phone)) {
-    fieldErrors.phone = '请输入包含 7 至 15 位数字的手机号，可带 + 前缀。'
-  }
-
-  if (!values.email && !emailValidity?.badInput) {
-    fieldErrors.email = '请输入邮箱。'
-  } else if (
-    !emailValidity
-    || emailValidity.badInput
-    || emailValidity.typeMismatch
-    || !values.email.split('@')[1]?.includes('.')
-  ) {
-    fieldErrors.email = '请输入有效的邮箱地址。'
-  }
-
-  if (values.status !== 'active' && values.status !== 'disabled') {
-    fieldErrors.status = '请选择正常或禁用。'
-  }
-
-  return { values, fieldErrors }
-}
 
 function cancel() {
   if (!isSubmitting.value) {
@@ -79,7 +40,12 @@ function cancel() {
 async function submit() {
   if (isSubmitting.value) return
 
-  const { values, fieldErrors } = validateDraft()
+  const validity = dialog.value?.querySelector<HTMLInputElement>('input[name="email"]')?.validity
+  const emailValidity = validity && {
+    badInput: validity.badInput,
+    typeMismatch: validity.typeMismatch,
+  }
+  const { values, fieldErrors } = validateUserForm(draft, emailValidity)
   errors.value = fieldErrors
   const firstInvalidField = fieldOrder.find(field => fieldErrors[field])
 
