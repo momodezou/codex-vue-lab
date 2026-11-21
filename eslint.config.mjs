@@ -10,6 +10,9 @@ export default withVueTs(
     ignores: [
       'dist/**',
       'node_modules/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
       '*.config.js',
       '*.config.ts',
     ],
