@@ -53,6 +53,8 @@
 
 不要为了完成任务而擅自扩大修改范围。
 
+跨会话接手任务时，先读 [项目上下文](docs/agent/PROJECT_CONTEXT.md)，再读 [当前交接](docs/agent/HANDOFF.md)，随后核对相关源码和测试。编写新任务时可使用 [任务模板](docs/agent/TASK_TEMPLATE.md)。
+
 ## 五、代码质量检查
 
 修改完成后，根据任务适用情况执行：
